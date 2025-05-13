@@ -1,0 +1,28 @@
+name: PHPStan
+
+on:
+  workflow_call:
+
+jobs:
+  lint:
+    name: PHPStan
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: 'latest'
+        ini-values: 'memory_limit=1G'
+        coverage: none
+
+    - name: Install Composer dependencies
+      uses: "ramsey/composer-install@v3"
+      with:
+        # Bust the cache at least once a month - output format: YYYY-MM.
+        custom-cache-suffix: $(date -u "+%Y-%m")
+
+    - name: Run PHPStan
+      run: vendor/bin/phpstan analyze
