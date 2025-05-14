@@ -15,7 +15,7 @@ jobs:
       uses: shivammathur/setup-php@v2
       with:
         php-version: 'latest'
-        ini-values: 'memory_limit=1G'
+        ini-values: 'memory_limit=2G'
         coverage: none
 
     - name: Install Composer dependencies
