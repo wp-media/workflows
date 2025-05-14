@@ -23,6 +23,7 @@ jobs:
       with:
         # Bust the cache at least once a month - output format: YYYY-MM.
         custom-cache-suffix: $(date -u "+%Y-%m")
+        composer-options: ${{ inputs.composer-options }}
 
     - name: Run PHPStan
       run: vendor/bin/phpstan analyze
