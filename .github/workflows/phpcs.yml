@@ -2,6 +2,12 @@ name: PHP CodeSniffer
 
 on:
   workflow_call:
+    inputs:
+      composer-options:
+        description: 'Composer options to pass to the install step'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   lint:
@@ -24,6 +30,7 @@ jobs:
       with:
         # Bust the cache at least once a month - output format: YYYY-MM.
         custom-cache-suffix: $(date -u "+%Y-%m")
+        composer-options: ${{ inputs.composer-options }}
 
     - name: Run PHPCS checks
       id: phpcs
