@@ -2,6 +2,12 @@ name: PHPStan
 
 on:
   workflow_call:
+    inputs:
+      composer-options:
+        description: 'Composer options to pass to the install step'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   lint:
