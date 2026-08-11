@@ -1,0 +1,85 @@
+name: 'Setup WordPress test suite'
+description: >-
+  Prepare the WordPress PHPUnit test suite: cache/checkout the develop.svn test
+  suite (installing SVN only on a cache miss), configure the MySQL 8 native
+  password auth workaround, and run the bundled install-wp-tests.sh. The install
+  script ships with this action, so consuming repositories no longer need their
+  own copy in bin/.
+
+inputs:
+  wp-version:
+    description: 'WordPress version passed to install-wp-tests.sh (e.g. "latest", "5.9").'
+    required: true
+  db-name:
+    description: 'Test database name.'
+    required: false
+    default: 'wordpress_test'
+  db-user:
+    description: 'Database user.'
+    required: false
+    default: 'root'
+  db-pass:
+    description: 'Database password.'
+    required: false
+    default: 'root'
+  db-host:
+    description: 'Database host (host:port).'
+    required: false
+    default: '127.0.0.1:3306'
+  wp-tests-dir:
+    description: 'Directory the WordPress test library is installed into (exported as WP_TESTS_DIR).'
+    required: false
+    default: '/tmp/tests/phpunit'
+  wp-core-dir:
+    description: 'Directory WordPress core is installed into (exported as WP_CORE_DIR).'
+    required: false
+    default: '/tmp/wordpress-develop'
+  configure-mysql-auth:
+    description: >-
+      Apply the MySQL 8 `mysql_native_password` auth workaround before installing.
+      Set to "false" when the database does not need it.
+    required: false
+    default: 'true'
+  cache-version:
+    description: 'Bump to manually invalidate the cached WordPress test suite.'
+    required: false
+    default: '1'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Export test suite paths
+      shell: bash
+      run: |
+        echo "WP_TESTS_DIR=${{ inputs.wp-tests-dir }}" >> "$GITHUB_ENV"
+        echo "WP_CORE_DIR=${{ inputs.wp-core-dir }}" >> "$GITHUB_ENV"
+
+    - name: Cache WordPress test suite
+      id: wp-cache
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ${{ inputs.wp-core-dir }}
+          ${{ inputs.wp-tests-dir }}
+        # The install script ships with this action, so its version is pinned by
+        # the action ref; bump `cache-version` to invalidate the cache manually.
+        key: wp-tests-${{ runner.os }}-wp${{ inputs.wp-version }}-v${{ inputs.cache-version }}
+
+    - name: Install SVN
+      if: steps.wp-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends subversion
+
+    - name: Configure MySQL native password auth
+      if: ${{ inputs.configure-mysql-auth == 'true' }}
+      shell: bash
+      run: |
+        host="${{ inputs.db-host }}"
+        mysql --get-server-public-key -h "${host%%:*}" -P "${host##*:}" -u "${{ inputs.db-user }}" -p"${{ inputs.db-pass }}" \
+          -e "ALTER USER '${{ inputs.db-user }}'@'%' IDENTIFIED WITH mysql_native_password BY '${{ inputs.db-pass }}';"
+
+    - name: Install WordPress tests
+      shell: bash
+      run: bash "${{ github.action_path }}/install-wp-tests.sh" "${{ inputs.db-name }}" "${{ inputs.db-user }}" "${{ inputs.db-pass }}" "${{ inputs.db-host }}" "${{ inputs.wp-version }}"

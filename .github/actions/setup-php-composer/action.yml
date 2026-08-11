@@ -1,0 +1,63 @@
+name: 'Setup PHP + Composer'
+description: >-
+  Set up PHP with problem matchers and install Composer dependencies, with an
+  optional extra dev requirement. Shared building block for the test workflow.
+
+inputs:
+  php-version:
+    description: 'PHP version to set up (passed to shivammathur/setup-php).'
+    required: true
+  coverage:
+    description: 'Coverage driver for setup-php: "xdebug", "pcov" or "none".'
+    required: false
+    default: 'none'
+  tools:
+    description: 'Tools to install via setup-php (e.g. "composer:v2", "cs2pr").'
+    required: false
+    default: 'composer:v2'
+  ini-values:
+    description: 'php.ini values to set (e.g. "memory_limit=2G").'
+    required: false
+    default: ''
+  composer-options:
+    description: 'Options passed to the Composer install step.'
+    required: false
+    default: '--no-scripts'
+  extra-require:
+    description: >-
+      Optional extra dev package(s) to `composer require --dev --no-scripts` after
+      install, e.g. `wpackagist-plugin/woocommerce "^7"` or `phpunit/phpcov`.
+      Leave empty to skip.
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup PHP
+      uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+      with:
+        php-version: ${{ inputs.php-version }}
+        coverage: ${{ inputs.coverage }}
+        tools: ${{ inputs.tools }}
+        ini-values: ${{ inputs.ini-values }}
+
+    - name: Setup problem matchers for PHP
+      shell: bash
+      run: echo "::add-matcher::${{ runner.tool_cache }}/php.json"
+
+    - name: Setup problem matchers for PHPUnit
+      shell: bash
+      run: echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
+
+    - name: Install Composer dependencies
+      uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # 4.0.0
+      with:
+        # Bust the cache at least once a month - output format: YYYY-MM.
+        custom-cache-suffix: $(date -u "+%Y-%m")
+        composer-options: ${{ inputs.composer-options }}
+
+    - name: Require extra dev dependency
+      if: ${{ inputs.extra-require != '' }}
+      shell: bash
+      run: composer require --dev --no-scripts ${{ inputs.extra-require }} -W

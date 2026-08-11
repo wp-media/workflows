@@ -1,0 +1,18 @@
+version: 2
+updates:
+  # Keep GitHub Actions used in the reusable workflows and composite actions up
+  # to date (security + version bumps). The globbed directories also cover the
+  # pinned action SHAs inside the composite action.yml files.
+  - package-ecosystem: "github-actions"
+    directories:
+      - "/"
+      - "/.github/actions/*"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "ci"
