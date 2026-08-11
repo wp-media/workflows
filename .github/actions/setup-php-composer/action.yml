@@ -1,7 +1,7 @@
 name: 'Setup PHP + Composer'
 description: >-
-  Set up PHP with problem matchers and install Composer dependencies, with an
-  optional extra dev requirement. Shared building block for the test workflow.
+  Set up PHP and install Composer dependencies, with an optional extra dev
+  requirement. Shared building block for the test workflow.
 
 inputs:
   php-version:
@@ -41,14 +41,6 @@ runs:
         coverage: ${{ inputs.coverage }}
         tools: ${{ inputs.tools }}
         ini-values: ${{ inputs.ini-values }}
-
-    - name: Setup problem matchers for PHP
-      shell: bash
-      run: echo "::add-matcher::${{ runner.tool_cache }}/php.json"
-
-    - name: Setup problem matchers for PHPUnit
-      shell: bash
-      run: echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
 
     - name: Install Composer dependencies
       uses: ramsey/composer-install@65e4f84970763564f46a70b8a54b90d033b3bdda # 4.0.0

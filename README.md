@@ -19,7 +19,7 @@ Replace `name` by the workflow filename, and `ref` can be either a branch name, 
 ## Composite actions for PHPUnit tests
 Two composite actions handle the PHPUnit setup so your workflow only declares the job and the test steps:
 
-- `.github/actions/setup-php-composer`: sets up PHP (with problem matchers) and installs Composer dependencies.
+- `.github/actions/setup-php-composer`: sets up PHP and installs Composer dependencies.
 - `.github/actions/setup-wp-tests`: caches/installs the WordPress test suite (bundling `install-wp-tests.sh`) and configures the MySQL 8 auth workaround.
 
 Replace `ref` below with a branch name, a tag or a commit SHA.
@@ -100,12 +100,21 @@ jobs:
         with:
           php-version: ${{ matrix.php-versions }}
 
+      - name: Setup problem matchers for PHP
+        run: echo "::add-matcher::${{ runner.tool_cache }}/php.json"
+
+      - name: Setup problem matchers for PHPUnit
+        run: echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
+
       - uses: wp-media/workflows/.github/actions/setup-wp-tests@ref
         with:
           wp-version: 'latest'
 
       - run: composer run-tests
 ```
+
+The problem matchers are registered in the caller (not in `setup-php-composer`) so
+that PHP/PHPUnit annotations surface against the workflow that owns the test run.
 
 Coverage build:
 
