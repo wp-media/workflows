@@ -17,12 +17,10 @@ Replace `name` by the workflow filename, and `ref` can be either a branch name, 
 - `phpstan.yml`: A workflow to run PHPStan
 
 ## Composite actions for PHPUnit tests
-Running a PHPUnit unit/integration suite is **not** shipped as a reusable workflow. A reusable workflow is a whole job: the caller cannot add its own steps to it, and secrets only reach the test process if the workflow itself maps them to `env`. That makes it a poor fit for tests, where each repository needs to keep its own secrets and often splits the run across several steps.
+Two composite actions handle the PHPUnit setup so your workflow only declares the job and the test steps:
 
-Instead, the duplicated *setup* is shipped as two composite actions. The consuming repository keeps ownership of its job — the `services:`, the `env:`/secrets, and the test step(s) — while the heavy setup collapses into two `uses:` lines.
-
-- `.github/actions/setup-php-composer`: sets up PHP (with the PHP and PHPUnit problem matchers) and installs Composer dependencies, with an optional extra dev requirement.
-- `.github/actions/setup-wp-tests`: prepares the WordPress PHPUnit test suite — caches/checks out the `develop.svn` test suite (installing SVN only on a cache miss), applies the MySQL 8 `mysql_native_password` auth workaround, and runs the **bundled** `install-wp-tests.sh`. Consuming repositories no longer need their own copy of the script in `bin/`.
+- `.github/actions/setup-php-composer`: sets up PHP (with problem matchers) and installs Composer dependencies.
+- `.github/actions/setup-wp-tests`: caches/installs the WordPress test suite (bundling `install-wp-tests.sh`) and configures the MySQL 8 auth workaround.
 
 Replace `ref` below with a branch name, a tag or a commit SHA.
 
@@ -52,7 +50,7 @@ Replace `ref` below with a branch name, a tag or a commit SHA.
 | `cache-version` | no | `1` | Bump to manually invalidate the cached WP test suite. |
 
 ### Example caller
-The caller owns everything job-level — triggers, `services:`, secrets, and the test steps. Only the setup is delegated:
+Declare the job (`services:`, secrets), delegate the setup, then run your own test steps:
 
 ```yaml
 name: Unit/Integration tests PHP8
@@ -90,11 +88,10 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
-    # Secrets stay in the consuming repository.
     env:
       ROCKET_KEY: ${{ secrets.ROCKET_KEY }}
       ROCKET_CLOUDFLARE_API_KEY: ${{ secrets.ROCKET_CLOUDFLARE_API_KEY }}
-      # ... other ROCKET_* / ROCKETCDN_* / ROCKET_CLOUDFLARE_* secrets
+      # ... other secrets your tests need
 
     steps:
       - uses: actions/checkout@v7
@@ -107,11 +104,10 @@ jobs:
         with:
           wp-version: 'latest'
 
-      # The test run stays in the caller and can be as many steps as needed.
       - run: composer run-tests
 ```
 
-For a coverage build, the caller drives it end to end — no shared coverage/Codacy logic:
+Coverage build:
 
 ```yaml
       - uses: wp-media/workflows/.github/actions/setup-php-composer@ref
